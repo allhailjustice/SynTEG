@@ -13,7 +13,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 NUM_GPU = 3
 
 # tf.config.experimental.set_memory_growth = True
-checkpoint_directory = "training_checkpoints_mt_diagnosis_256"
+checkpoint_directory = "training_checkpoints_dependency_learning"
 checkpoint_prefix = os.path.join(checkpoint_directory, "ckpt")
 num_code = 1276
 batchsize = 40
@@ -331,7 +331,7 @@ def train(config):
         def one_step(batch, is_training):
             word, pos, gap, num_visit, visit_length = batch
             with tf.GradientTape() as tape:
-                diagnosis_output = trns(word + 2, pos + 2, gap + 1, num_visit,visit_length, is_training)
+                diagnosis_output = trns(word + 2, pos, gap, num_visit,visit_length, is_training)
                 diagnosis_loss = cal_loss(word[:, 1:, :], num_visit - 1, diagnosis_output)
                 loss = diagnosis_loss
             if is_training:
