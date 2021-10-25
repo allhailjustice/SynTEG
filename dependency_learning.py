@@ -253,9 +253,9 @@ class SingleVisitTransformer(tf.keras.Model):
         return visit_representation
 
 
-class Transformer(tf.keras.Model):
+class Model(tf.keras.Model):
     def __init__(self, config):
-        super(Transformer, self).__init__()
+        super(Model, self).__init__()
         self.embeddings = Embedding(config)
         self.visit_att = SingleVisitTransformer(config)
         self.lstm = SingleLSTM(config)
@@ -324,8 +324,8 @@ def train(config):
         dist_dataset_test = strategy.experimental_distribute_dataset(parsed_dataset_test)
 
         optimizer = tf.keras.optimizers.Adam(1e-4)
-        trns = Transformer(config)
-        checkpoint = tf.train.Checkpoint(optimizer=optimizer, model=trns)
+        model = Transformer(config)
+        checkpoint = tf.train.Checkpoint(optimizer=optimizer, model=model)
         checkpoint.restore(tf.train.latest_checkpoint(checkpoint_directory))
 
         def one_step(batch, is_training):
