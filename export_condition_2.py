@@ -213,9 +213,9 @@ class SingleVisitTransformer(tf.keras.Model):
         return outputs
 
 
-class Transformer(tf.keras.Model):
+class Model(tf.keras.Model):
     def __init__(self, config):
-        super(Transformer, self).__init__()
+        super(Model, self).__init__()
         self.embeddings = Embedding(config)
         self.visit_att = SingleVisitTransformer(config)
         self.lstm = SingleLSTM(config)
@@ -261,8 +261,8 @@ def train(config):
     parsed_dataset_train = dataset_train.map(_parse_function, num_parallel_calls=4)
     parsed_dataset_train = parsed_dataset_train.batch(batchsize, drop_remainder=True).prefetch(5)
 
-    trns = Transformer(config)
-    checkpoint = tf.train.Checkpoint(model=trns)
+    model = Model(config)
+    checkpoint = tf.train.Checkpoint(model=model)
     checkpoint.restore(tf.train.latest_checkpoint(checkpoint_directory))
 
     @tf.function
@@ -281,41 +281,6 @@ def train(config):
                     writer.write(example)
             if i % 500 == 499:
                 print(int(i/500))
-    # np.set_printoptions(threshold=1000000)
-    # for i,batch in enumerate(parsed_dataset_train):
-    #     word, pos, pos_, gap, num_visit = batch
-    #     condition_vector = one_step(word, pos, gap, num_visit)
-    #     for b,n in enumerate(tf.squeeze(num_visit-1).numpy()):
-    #         for k in range(n):
-    #             word_tmp = word[b, k+1, :].numpy()
-    #             condition_vector_tmp = condition_vector[b, k, :].numpy()
-    #             print(word_tmp)
-    #             print(condition_vector_tmp)
-    #     if i % 500 == 499:
-    #         print(int(i/500))
-
-
-def test():
-    feature_description = {
-        'word': tf.io.FixedLenFeature([36], tf.int64),
-        'condition': tf.io.FixedLenFeature([256], tf.float32)
-    }
-
-    def _parse_function(example_proto):
-        parsed = tf.io.parse_single_example(example_proto, feature_description)
-        return parsed['word'], parsed['condition']
-
-    dataset_train = tf.data.TFRecordDataset('condition_vector_2.tfrecord')
-    parsed_dataset_train = dataset_train.map(_parse_function, num_parallel_calls=4)
-    parsed_dataset_train = parsed_dataset_train.batch(batchsize, drop_remainder=True).prefetch(5)
-
-    np.set_printoptions(threshold=1000000)
-    for args in parsed_dataset_train:
-        word, condition = args
-        for i in range(3):
-            print(word[i].numpy())
-            print(condition[i].numpy())
-        break
 
 
 if __name__ == '__main__':
