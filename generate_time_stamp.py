@@ -162,9 +162,9 @@ def abs_glorot_uniform(shape, dtype=None, partition_info=None):
     return tf.math.abs(tf.keras.initializers.glorot_uniform(seed=None)(shape,dtype=dtype))
 
 
-class Transformer(tf.keras.Model):
+class Model(tf.keras.Model):
     def __init__(self):
-        super(Transformer, self).__init__()
+        super(Model, self).__init__()
         self.embeddings = Embedding()
         self.lstm = LSTM()
         self.block = Block()
@@ -314,8 +314,8 @@ def train():
         dist_dataset_test = strategy.experimental_distribute_dataset(parsed_dataset_test)
 
         optimizer = tf.keras.optimizers.Adam(1e-5)
-        trns = Transformer()
-        checkpoint = tf.train.Checkpoint(optimizer=optimizer, model=trns)
+        model = Model()
+        checkpoint = tf.train.Checkpoint(optimizer=optimizer, model=model)
 
         def one_step(batch, is_training):
             word, pos, gap, num_visit = batch
@@ -368,43 +368,5 @@ def train():
             checkpoint.save(file_prefix=checkpoint_prefix)
 
 
-def test():
-    feature_description = {
-        'word': tf.io.FixedLenFeature([max_num_visit * max_length_visit], tf.int64),
-        'pos': tf.io.FixedLenFeature([max_num_visit], tf.int64),
-        'gap': tf.io.FixedLenFeature([max_num_visit], tf.int64),
-        'num_visit': tf.io.FixedLenFeature([1], tf.int64)
-    }
-
-    def _parse_function(example_proto):
-        parsed = tf.io.parse_single_example(example_proto, feature_description)
-        word = tf.reshape(parsed['word'], [max_num_visit, max_length_visit])[:,1:]
-        pos = tf.cast(parsed['pos'] / 365, tf.int64)
-        return word, pos, parsed['gap'], parsed['num_visit']
-
-    dataset_test = tf.data.TFRecordDataset('lstm_data/train.tfrecord')
-    parsed_dataset_test = dataset_test.map(_parse_function, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    parsed_dataset_test = parsed_dataset_test.batch(batchsize * NUM_GPU, drop_remainder=True).prefetch(tf.data.experimental.AUTOTUNE)
-
-    optimizer = tf.keras.optimizers.Adam(1e-5)
-    trns = Transformer()
-    checkpoint = tf.train.Checkpoint(optimizer=optimizer, model=trns)
-    checkpoint.restore(tf.train.latest_checkpoint(checkpoint_directory)).expect_partial()
-
-    for x,batch in enumerate(parsed_dataset_test):
-        word, pos, gap, num_visit = batch
-        num_visit = tf.squeeze(num_visit)
-        sequence_mask = tf.sequence_mask(num_visit - 1, max_num_visit - 1)
-        gap, loss, probs = trns.test(word, pos, gap, sequence_mask)
-
-        # print(tf.squeeze(gap).numpy())
-        # print(tf.squeeze(loss).numpy())
-        print(probs.numpy())
-        if x > 3:
-            break
-
-
 if __name__ == '__main__':
-    test()
-    # train()
-    # test_embedding()
+    train()
